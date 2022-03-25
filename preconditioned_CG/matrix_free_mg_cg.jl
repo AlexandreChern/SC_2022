@@ -369,10 +369,11 @@ function matrix_free_MGCG_Three_level(b_GPU,x_GPU;A_4h = A_4h_lu,maxiter=length(
 end
 
 
-function initial_guess_interpolation_CG(A,b,b_2h,x;A_2h = A_2h_lu,maxiter=length(b))
+function initial_guess_interpolation_CG(A,b,b_2h,x,Nx_2h;A_2h = A_2h_lu,maxiter=length(b))
     x_2h = A_2h \ b_2h
-    prolongation_2d(Nx_2h) * x_2h
-    
+    x_interpolated = prolongation_2d(Nx_2h) * x_2h
+    x,history = cg!(x_interpolated,A,b;abstol = abstol,log=true)
+    return history.iters, history.data[:resnorm]
 end
 
 function precond_matrix(A, b; m=3, solver="jacobi",ω_richardson=ω_richardson,h=h,SBPp=SBPp)
@@ -469,6 +470,8 @@ function test_matrix_free_MGCG(;level=6,nu=3,ω=2/3,SBPp=2)
 
     norms_CG_GPU, history = cg(A_GPU_sparse,b_GPU_sparse,abstol=abstol,log=true)
 
+    iter_initial_guess_cg, norm_initial_guess_cg = initial_guess_interpolation_CG(A,b,b_2h,x,Nx_2h;A_2h = A_2h_lu,maxiter=length(b))
+
     # # 3-level multigrid
     # x_3mg, norm_3mg = Three_level_multigrid(A,b,A_2h,b_2h,A_4h,b_4h,Nx,Ny;nu=3,NUM_V_CYCLES=1,SBPp=2)
 
@@ -506,6 +509,10 @@ function test_matrix_free_MGCG(;level=6,nu=3,ω=2/3,SBPp=2)
         cg(A_GPU_sparse,b_GPU_sparse,abstol=abstol,log=true)
     end
 
+    t_CG_CPU_initial_guess = @elapsed for _ in 1:REPEAT
+        initial_guess_interpolation_CG(A,b,b_2h,x,Nx_2h;A_2h = A_2h_lu,maxiter=length(b))
+    end
+
     println()
 
 
@@ -522,6 +529,7 @@ function test_matrix_free_MGCG(;level=6,nu=3,ω=2/3,SBPp=2)
     @show t_MGCG_CPU, iter_mg_cg
     @show t_MGCG_GPU_sparse, iter_mg_cg_GPU
     @show t_CG_GPU_sparse, length(history.data[:resnorm])
+    @show t_CG_CPU_initial_guess, iter_initial_guess_cg
 
     return nothing
 end
