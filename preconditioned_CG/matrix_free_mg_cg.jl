@@ -466,7 +466,7 @@ function test_matrix_free_MGCG(;level=6,nu=3,ω=2/3,SBPp=2)
   
 
     x_GPU = CuArray(zeros(Nx,Ny))
-    num_iter_steps_matrix_free_GPU_Three_level, norms_matrix_free_GPU_Three_level = matrix_free_MGCG_Three_level(b_GPU,x_GPU;A_4h = A_4h_lu,maxiter=length(b_GPU),abstol=abstol,nu=nu)
+    # num_iter_steps_matrix_free_GPU_Three_level, norms_matrix_free_GPU_Three_level = matrix_free_MGCG_Three_level(b_GPU,x_GPU;A_4h = A_4h_lu,maxiter=length(b_GPU),abstol=abstol,nu=nu)
     
     iter_mg_cg, norm_mg_cg, error_mg_cg = mg_preconditioned_CG(A,b,x;maxiter=length(b),A_2h = A_2h_lu, abstol=abstol,NUM_V_CYCLES=1,nu=nu,use_galerkin=true,direct_sol=direct_sol,H_tilde=H_tilde,SBPp=SBPp)
 
@@ -499,10 +499,10 @@ function test_matrix_free_MGCG(;level=6,nu=3,ω=2/3,SBPp=2)
         matrix_free_MGCG(b_GPU,x_GPU;A_2h=A_2h_lu,maxiter=length(b_GPU),abstol=abstol,nu=nu)
     end
 
-    t_matrix_free_MGCG_Three_level_GPU = @elapsed for _ in 1:REPEAT
-        x_GPU = CuArray(zeros(Nx,Ny))
-        matrix_free_MGCG_Three_level(b_GPU,x_GPU;A_4h=A_4h_lu,maxiter=length(b_GPU),abstol=abstol,nu=nu)
-    end
+    # t_matrix_free_MGCG_Three_level_GPU = @elapsed for _ in 1:REPEAT
+    #     x_GPU = CuArray(zeros(Nx,Ny))
+    #     matrix_free_MGCG_Three_level(b_GPU,x_GPU;A_4h=A_4h_lu,maxiter=length(b_GPU),abstol=abstol,nu=nu)
+    # end
 
     t_MGCG_CPU = @elapsed for _ in 1:REPEAT
         x = zeros(Nx*Ny)
@@ -530,7 +530,7 @@ function test_matrix_free_MGCG(;level=6,nu=3,ω=2/3,SBPp=2)
 
 
     t_matrix_free_MGCG_GPU = t_matrix_free_MGCG_GPU / REPEAT
-    t_matrix_free_MGCG_Three_level_GPU = t_matrix_free_MGCG_Three_level_GPU / REPEAT
+    # t_matrix_free_MGCG_Three_level_GPU = t_matrix_free_MGCG_Three_level_GPU / REPEAT
     t_MGCG_CPU /= REPEAT
     t_MGCG_GPU_sparse /= REPEAT
     t_CG_GPU_sparse /= REPEAT
@@ -538,7 +538,7 @@ function test_matrix_free_MGCG(;level=6,nu=3,ω=2/3,SBPp=2)
     @show Nx, Ny
 
     @show t_matrix_free_MGCG_GPU, num_iter_steps_matrix_free_GPU
-    @show  t_matrix_free_MGCG_Three_level_GPU, num_iter_steps_matrix_free_GPU_Three_level
+    # @show  t_matrix_free_MGCG_Three_level_GPU, num_iter_steps_matrix_free_GPU_Three_level
     @show t_MGCG_CPU, iter_mg_cg
     @show t_MGCG_GPU_sparse, iter_mg_cg_GPU
     @show t_CG_GPU_sparse, length(history.data[:resnorm])
