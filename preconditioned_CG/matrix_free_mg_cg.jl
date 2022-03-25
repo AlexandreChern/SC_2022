@@ -369,14 +369,14 @@ function matrix_free_MGCG_Three_level(b_GPU,x_GPU;A_4h = A_4h_lu,maxiter=length(
 end
 
 
-function initial_guess_interpolation_CG(A,b,b_2h,x,Nx_2h;A_2h = A_2h_lu,maxiter=length(b))
+function initial_guess_interpolation_CG(A,b,b_2h,x,Nx_2h;A_2h = A_2h_lu,abstol=abstol,maxiter=length(b))
     x_2h = A_2h \ b_2h
     x_interpolated = prolongation_2d(Nx_2h) * x_2h
     x,history = cg!(x_interpolated,A,b;abstol = abstol,log=true)
     return history.iters, history.data[:resnorm]
 end
 
-function initial_guess_interpolation_CG_GPU(A_GPU,b_GPU,b_2h,x,Nx_2h;A_2h = A_2h_lu,maxiter=length(b))
+function initial_guess_interpolation_CG_GPU(A_GPU,b_GPU,b_2h,x,Nx_2h;A_2h = A_2h_lu,abstol=abstol,maxiter=length(b))
     x_2h = A_2h \ b_2h
     x_interpolated = prolongation_2d_GPU(Nx_2h) * CuArray(x_2h)
     x,history = cg!(x_interpolated,A_GPU,b_GPU;abstol = abstol,log=true)
@@ -477,8 +477,8 @@ function test_matrix_free_MGCG(;level=6,nu=3,ω=2/3,SBPp=2)
 
     norms_CG_GPU, history = cg(A_GPU_sparse,b_GPU_sparse,abstol=abstol,log=true)
 
-    iter_initial_guess_cg, norm_initial_guess_cg = initial_guess_interpolation_CG(A,b,b_2h,x,Nx_2h;A_2h = A_2h_lu,maxiter=length(b))
-    iter_initial_guess_cg_GPU, norm_initial_guess_cg_GPU = initial_guess_interpolation_CG_GPU(A_GPU_sparse,b_GPU,b_2h,x,Nx_2h;A_2h = A_2h_lu,maxiter=length(b))
+    iter_initial_guess_cg, norm_initial_guess_cg = initial_guess_interpolation_CG(A,b,b_2h,x,Nx_2h;A_2h = A_2h_lu,abstol=abstol,maxiter=length(b))
+    iter_initial_guess_cg_GPU, norm_initial_guess_cg_GPU = initial_guess_interpolation_CG_GPU(A_GPU_sparse,b_GPU,b_2h,x,Nx_2h;A_2h = A_2h_lu,abstol=abstol,maxiter=length(b))
 
 
     # # 3-level multigrid
@@ -519,11 +519,11 @@ function test_matrix_free_MGCG(;level=6,nu=3,ω=2/3,SBPp=2)
     end
 
     t_CG_CPU_initial_guess = @elapsed for _ in 1:REPEAT
-        initial_guess_interpolation_CG(A,b,b_2h,x,Nx_2h;A_2h = A_2h_lu,maxiter=length(b))
+        initial_guess_interpolation_CG(A,b,b_2h,x,Nx_2h;A_2h = A_2h_lu,abstol=abstol,maxiter=length(b))
     end
 
     t_CG_GPU_initial_guess = @elapsed for _ in 1:REPEAT
-        initial_guess_interpolation_CG_GPU(A_GPU_sparse,b_GPU,b_2h,x,Nx_2h;A_2h = A_2h_lu,maxiter=length(b))
+        initial_guess_interpolation_CG_GPU(A_GPU_sparse,b_GPU,b_2h,x,Nx_2h;A_2h = A_2h_lu,abstol=abstol,maxiter=length(b))
     end
 
     println()
