@@ -369,7 +369,13 @@ function matrix_free_MGCG_Three_level(b_GPU,x_GPU;A_4h = A_4h_lu,maxiter=length(
 end
 
 
-function precond_matrix(A, b; m=3, solver="jacobi")
+function initial_guess_interpolation_CG(A,b,b_2h,x;A_2h = A_2h_lu,maxiter=length(b))
+    x_2h = A_2h \ b_2h
+    prolongation_2d(Nx_2h) * x_2h
+    
+end
+
+function precond_matrix(A, b; m=3, solver="jacobi",ω_richardson=ω_richardson,h=h,SBPp=SBPp)
     #pre and post smoothing 
     N = length(b)
     IN = sparse(Matrix(I, N, N))
@@ -440,7 +446,7 @@ function test_matrix_free_MGCG(;level=6,nu=3,ω=2/3,SBPp=2)
 
     ω_richardson = 0.15
     h = 1/(Nx-1)
-    (M,R,H,I_p,_,I_r,IN) = precond_matrix(A,b,m=3,solver="richardson")
+    # (M,R,H,I_p,_,I_r,IN) = precond_matrix(A,b;m=3,solver="richardson",ω_richardson=ω_richardson,h=h,SBPp=SBPp)
 
     num_iter_steps_matrix_free_GPU, norms_matrix_free_GPU = matrix_free_MGCG(b_GPU,x_GPU;A_2h = A_2h_lu,maxiter=length(b_GPU),abstol=abstol,nu=nu)
 
