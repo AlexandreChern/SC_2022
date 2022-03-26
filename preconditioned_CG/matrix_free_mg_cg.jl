@@ -583,7 +583,8 @@ test_matrix_free_MGCG(level=9)
 test_matrix_free_MGCG(level=10)
 test_matrix_free_MGCG(level=11)
 # test_matrix_free_MGCG(level=11)
-# test_matrix_free_MGCG(level=12)
+test_matrix_free_MGCG(level=12)
+test_matrix_free_MGCG(level=13)
 
 # let
 #     level = 6

@@ -1,0 +1,3 @@
+# Talapas SLURM output file
+*.out
+*.err
