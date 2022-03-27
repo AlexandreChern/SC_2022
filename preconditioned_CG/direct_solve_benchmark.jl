@@ -17,7 +17,7 @@ end
 
 function test_direct_solve(;SBPp=2)
     # io = IOBuffer()
-    for level in 6:12
+    for level in 6:13
         (A,b,H_tilde,Nx,Ny) = Assembling_matrix(level,p=SBPp);
         A_lu = lu(A)
         A_lu \ b

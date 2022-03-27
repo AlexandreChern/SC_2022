@@ -459,7 +459,8 @@ function test_matrix_free_MGCG(;level=6,nu=3,ω=2/3,SBPp=2)
 
     A_2h_lu = lu(A_2h)
     A_4h_lu = lu(A_4h)
-    direct_sol = A\b
+    A_lu = lu(A)
+    direct_sol = A_lu\b
     reltol = sqrt(eps(real(eltype(b))))
     x = zeros(Nx*Ny);
     abstol = norm(A*x-b) * reltol
@@ -513,6 +514,10 @@ function test_matrix_free_MGCG(;level=6,nu=3,ω=2/3,SBPp=2)
 
     REPEAT = 1
 
+    t_direct_solve = @elapsed for _ in 1:REPEAT
+        A_lu \ b
+    end
+
     t_matrix_free_MGCG_GPU = @elapsed for _ in 1:REPEAT
         x_GPU = CuArray(zeros(Nx,Ny))
         matrix_free_MGCG(b_GPU,x_GPU;A_2h=A_2h_lu,maxiter=length(b_GPU),abstol=abstol,nu=nu)
@@ -551,7 +556,7 @@ function test_matrix_free_MGCG(;level=6,nu=3,ω=2/3,SBPp=2)
 
     println()
 
-
+    t_direct_solve /= REPEAT
     t_matrix_free_MGCG_GPU = t_matrix_free_MGCG_GPU / REPEAT
     # t_matrix_free_MGCG_Three_level_GPU = t_matrix_free_MGCG_Three_level_GPU / REPEAT
     t_MGCG_CPU /= REPEAT
@@ -563,6 +568,7 @@ function test_matrix_free_MGCG(;level=6,nu=3,ω=2/3,SBPp=2)
 
     @show Nx, Ny
 
+    @show t_direct_solve
     @show t_matrix_free_MGCG_GPU, num_iter_steps_matrix_free_GPU
     # @show  t_matrix_free_MGCG_Three_level_GPU, num_iter_steps_matrix_free_GPU_Three_level
     @show t_MGCG_CPU, iter_mg_cg
@@ -576,13 +582,12 @@ function test_matrix_free_MGCG(;level=6,nu=3,ω=2/3,SBPp=2)
 end
 
 
-test_matrix_free_MGCG(level=6)
-test_matrix_free_MGCG(level=7)
-test_matrix_free_MGCG(level=8)
-test_matrix_free_MGCG(level=9)
-test_matrix_free_MGCG(level=10)
+# test_matrix_free_MGCG(level=6)
+# test_matrix_free_MGCG(level=7)
+# test_matrix_free_MGCG(level=8)
+# test_matrix_free_MGCG(level=9)
+# test_matrix_free_MGCG(level=10)
 test_matrix_free_MGCG(level=11)
-# test_matrix_free_MGCG(level=11)
 test_matrix_free_MGCG(level=12)
 test_matrix_free_MGCG(level=13)
 
