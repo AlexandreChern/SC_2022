@@ -139,7 +139,7 @@ function Assembling_matrix(level;p=2)
     Ny = N_y + 1;
 
     (D1_x, D1_y, D2_x, D2_y, D2, HI_x, HI_y, BS_x, BS_y, HI_tilde, H_tilde, I_Nx, I_Ny, e_E, e_W, e_S, e_N, E_E, E_W, E_S, E_N) = Operators_2d(i,j,h_list_x,h_list_y,p=p);
-    analy_sol = u(x,y');
+    analy_sol = u(x,y')[:];
 
     # Penalty Parameters
     tau_E = -13/hx;
@@ -184,7 +184,7 @@ function Assembling_matrix(level;p=2)
     A = -H_tilde*A;
     b = -H_tilde*b;
 
-    return (A,b,H_tilde,Nx,Ny)
+    return (A,b,H_tilde,Nx,Ny,analy_sol)
 end
 
 function prolongation_matrix(N)
@@ -520,7 +520,7 @@ function mg_preconditioned_CG(A,b,x;A_2h = A_2h_lu,maxiter=length(b),abstol=sqrt
         rzold = rznew
     end
     # @show num_iter_steps
-    return num_iter_steps, norms, errors
+    return x,num_iter_steps, norms, errors
 end
 
 function mg_preconditioned_CG_GPU(A_GPU,b_GPU,x_GPU;A_2h = A_2h_lu,maxiter=length(b),abstol=sqrt(eps(real(eltype(b)))),NUM_V_CYCLES=1,nu=3,use_galerkin=true,direct_sol=0,H_tilde=0,SBPp=2)
@@ -566,7 +566,7 @@ function mg_preconditioned_CG_GPU(A_GPU,b_GPU,x_GPU;A_2h = A_2h_lu,maxiter=lengt
         rzold = rznew
     end
     # @show num_iter_steps
-    return num_iter_steps, norms, errors
+    return x_GPU,num_iter_steps, norms, errors
 end
 
 function test_preconditioned_CG(;level=level,nu=3,ω=2/3,SBPp=2)
@@ -584,7 +584,7 @@ function test_preconditioned_CG(;level=level,nu=3,ω=2/3,SBPp=2)
 
     cond_A_M = cond(M*A)
     x = zeros(Nx*Ny);
-    iter_mg_cg, norm_mg_cg, error_mg_cg = mg_preconditioned_CG(A,b,x;A_2h = A_2h_lu, maxiter=length(b),abstol=abstol,NUM_V_CYCLES=1,nu=nu,use_galerkin=true,direct_sol=direct_sol,H_tilde=H_tilde,SBPp=SBPp)
+    x_mgcg_GPU,iter_mg_cg, norm_mg_cg, error_mg_cg = mg_preconditioned_CG(A,b,x;A_2h = A_2h_lu, maxiter=length(b),abstol=abstol,NUM_V_CYCLES=1,nu=nu,use_galerkin=true,direct_sol=direct_sol,H_tilde=H_tilde,SBPp=SBPp)
     error_mg_cg_bound_coef = (sqrt(cond_A_M) - 1) / (sqrt(cond_A_M) + 1)
     error_mg_cg_bound = error_mg_cg[1] .* 2 .* error_mg_cg_bound_coef .^ (0:1:length(error_mg_cg)-1)
     scatter(log.(10,error_mg_cg),label="error_mg_cg", markercolor = "darkblue")

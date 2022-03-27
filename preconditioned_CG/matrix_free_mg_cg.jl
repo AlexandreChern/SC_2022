@@ -320,7 +320,7 @@ function matrix_free_MGCG(b_GPU,x_GPU;A_2h = A_2h_lu,maxiter=length(b),abstol=sq
         p_GPU .= z_GPU .+ beta_GPU .* p_GPU
         rzold_GPU = rznew_GPU
     end
-    return num_iter_steps_GPU, norms_GPU
+    return num_iter_steps_GPU, norms_GPU, x_GPU
 end
 
 function matrix_free_MGCG_Three_level(b_GPU,x_GPU;A_4h = A_4h_lu,maxiter=length(b),abstol=sqrt(eps(real(eltype(b)))),NUM_V_CYCLES=1,nu=3,use_galerkin=true,direct_sol=0,H_tilde=0,SBPp=2)
@@ -373,14 +373,14 @@ function initial_guess_interpolation_CG(A,b,b_2h,x,Nx_2h;A_2h = A_2h_lu,abstol=a
     x_2h = A_2h \ b_2h
     x_interpolated = prolongation_2d(Nx_2h) * x_2h
     x,history = cg!(x_interpolated,A,b;abstol = abstol,log=true)
-    return history.iters, history.data[:resnorm]
+    return x,history.iters, history.data[:resnorm]
 end
 
 function initial_guess_interpolation_CG_GPU(A_GPU,b_GPU,b_2h,x,Nx_2h;A_2h = A_2h_lu,abstol=abstol,maxiter=length(b))
     x_2h = A_2h \ b_2h
     x_interpolated = prolongation_2d_GPU(Nx_2h) * CuArray(x_2h)
     x,history = cg!(x_interpolated,A_GPU,b_GPU;abstol = abstol,log=true)
-    return history.iters, history.data[:resnorm]
+    return x, history.iters, history.data[:resnorm]
 end
 
 
@@ -392,7 +392,7 @@ function initial_guess_interpolation_three_level_CG_GPU(A_GPU,A_2h_GPU,b_GPU,b_2
     x,history_h = cg!(x_interpolated,A_GPU,b_GPU;abstol=abstol,log=true)
     # @show history_2h.iters, history_2h.data[:resnorm]
     # @show history_h.iters, history_h.data[:resnorm]
-    return history_2h.iters,history_h.iters,history_2h.data[:resnorm],history_h.data[:resnorm]
+    return x, history_2h.iters,history_h.iters,history_2h.data[:resnorm],history_h.data[:resnorm]
 end
 
 function precond_matrix(A, b; m=3, solver="jacobi",ω_richardson=ω_richardson,h=h,SBPp=SBPp)
@@ -451,9 +451,9 @@ function precond_matrix(A, b; m=3, solver="jacobi",ω_richardson=ω_richardson,h
 end
 
 function test_matrix_free_MGCG(;level=6,nu=3,ω=2/3,SBPp=2)
-    (A,b,H_tilde,Nx,Ny) = Assembling_matrix(level,p=SBPp);
-    (A_2h,b_2h,H_tilde_2h,Nx_2h,Ny_2h) = Assembling_matrix(level-1,p=SBPp);
-    (A_4h,b_4h,H_tilde_4h,Nx_4h,Ny_4h) = Assembling_matrix(level-2,p=SBPp);
+    (A,b,H_tilde,Nx,Ny,analy_sol) = Assembling_matrix(level,p=SBPp);
+    (A_2h,b_2h,H_tilde_2h,Nx_2h,Ny_2h,analy_sol_2h) = Assembling_matrix(level-1,p=SBPp);
+    (A_4h,b_4h,H_tilde_4h,Nx_4h,Ny_4h,analy_sol_4h) = Assembling_matrix(level-2,p=SBPp);
     A_2h_GPU_sparse = CUDA.CUSPARSE.CuSparseMatrixCSC(A_2h)
     b_2h_GPU = CuArray(b_2h)
 
@@ -461,6 +461,8 @@ function test_matrix_free_MGCG(;level=6,nu=3,ω=2/3,SBPp=2)
     A_4h_lu = lu(A_4h)
     A_lu = lu(A)
     direct_sol = A_lu\b
+    direct_err = sqrt((direct_sol-analy_sol)'*H_tilde*(direct_sol-analy_sol))
+
     reltol = sqrt(eps(real(eltype(b))))
     x = zeros(Nx*Ny);
     abstol = norm(A*x-b) * reltol
@@ -484,22 +486,28 @@ function test_matrix_free_MGCG(;level=6,nu=3,ω=2/3,SBPp=2)
     x_GPU = CuArray(zeros(Nx,Ny))
     # num_iter_steps_matrix_free_GPU_Three_level, norms_matrix_free_GPU_Three_level = matrix_free_MGCG_Three_level(b_GPU,x_GPU;A_4h = A_4h_lu,maxiter=length(b_GPU),abstol=abstol,nu=nu)
     
-    iter_mg_cg, norm_mg_cg, error_mg_cg = mg_preconditioned_CG(A,b,x;maxiter=length(b),A_2h = A_2h_lu, abstol=abstol,NUM_V_CYCLES=1,nu=nu,use_galerkin=true,direct_sol=direct_sol,H_tilde=H_tilde,SBPp=SBPp)
+    x_mg_cg, iter_mg_cg, norm_mg_cg, error_mg_cg = mg_preconditioned_CG(A,b,x;maxiter=length(b),A_2h = A_2h_lu, abstol=abstol,NUM_V_CYCLES=1,nu=nu,use_galerkin=true,direct_sol=direct_sol,H_tilde=H_tilde,SBPp=SBPp)
+    error_mg_cg = sqrt((x_mg_cg - analy_sol)'*H_tilde*(x_mg_cg - analy_sol))
 
-    iter_mg_cg_GPU, norm_mg_cg_GPU, error_mg_cg_GPU = mg_preconditioned_CG_GPU(A_GPU_sparse,b_GPU_sparse,x_GPU_sparse;maxiter=length(b_GPU_sparse),A_2h = A_2h_lu, abstol=abstol,NUM_V_CYCLES=1,nu=nu,use_galerkin=true,H_tilde=H_tilde,SBPp=SBPp)
+    x_mg_cg_GPU, iter_mg_cg_GPU, norm_mg_cg_GPU, error_mg_cg_GPU = mg_preconditioned_CG_GPU(A_GPU_sparse,b_GPU_sparse,x_GPU_sparse;maxiter=length(b_GPU_sparse),A_2h = A_2h_lu, abstol=abstol,NUM_V_CYCLES=1,nu=nu,use_galerkin=true,H_tilde=H_tilde,SBPp=SBPp)
+    error_mg_cg_GPU = sqrt((Array(x_mg_cg_GPU) - analy_sol)'*H_tilde*(Array(x_mg_cg_GPU)-analy_sol))
     # @show norms_GPU
     # @show norm_mg_cg
     # @show norm_mg_cg_GPU
 
-    norms_CG_GPU, history = cg(A_GPU_sparse,b_GPU_sparse,abstol=abstol,log=true)
+    x_CG_GPU, history = cg(A_GPU_sparse,b_GPU_sparse,abstol=abstol,log=true)
+    error_CG_GPU = sqrt((Array(x_CG_GPU)-analy_sol)'*H_tilde*(Array(x_CG_GPU)-analy_sol))
 
-    iter_initial_guess_cg, norm_initial_guess_cg = initial_guess_interpolation_CG(A,b,b_2h,x,Nx_2h;A_2h = A_2h_lu,abstol=abstol,maxiter=length(b))
-    iter_initial_guess_cg_GPU, norm_initial_guess_cg_GPU = initial_guess_interpolation_CG_GPU(A_GPU_sparse,b_GPU,b_2h,x,Nx_2h;A_2h = A_2h_lu,abstol=abstol,maxiter=length(b))
+    x_initial_guess, iter_initial_guess_cg, norm_initial_guess_cg = initial_guess_interpolation_CG(A,b,b_2h,x,Nx_2h;A_2h = A_2h_lu,abstol=abstol,maxiter=length(b))
+    
+    initial_guess_cg_error = sqrt((x_initial_guess - analy_sol)'*H_tilde*(x_initial_guess-analy_sol))
 
+    x_initial_guess_GPU, iter_initial_guess_cg_GPU, norm_initial_guess_cg_GPU = initial_guess_interpolation_CG_GPU(A_GPU_sparse,b_GPU,b_2h,x,Nx_2h;A_2h = A_2h_lu,abstol=abstol,maxiter=length(b))
+    initial_guess_cg_GPU_error = sqrt((Array(x_initial_guess_GPU) - analy_sol)'*H_tilde*(Array(x_initial_guess_GPU)-analy_sol))
 
     # 3-level interpolation 
-    iter_initial_guess_three_level_cg_GPU_2h,iter_initial_guess_three_level_cg_GPU_h, norm_initial_guess_three_level_cg_GPU_2h,norm_initial_guess_three_level_cg_GPU_h = initial_guess_interpolation_three_level_CG_GPU(A_GPU_sparse,A_2h_GPU_sparse,b_GPU,b_2h_GPU,b_2h,b_4h,x,Nx_2h,Nx_4h;A_2h = A_2h_lu, A_4h = A_4h_lu,abstol=abstol,maxiter=length(b))
-
+    x_initial_guess_three_level_GPU,iter_initial_guess_three_level_cg_GPU_2h,iter_initial_guess_three_level_cg_GPU_h, norm_initial_guess_three_level_cg_GPU_2h,norm_initial_guess_three_level_cg_GPU_h = initial_guess_interpolation_three_level_CG_GPU(A_GPU_sparse,A_2h_GPU_sparse,b_GPU,b_2h_GPU,b_2h,b_4h,x,Nx_2h,Nx_4h;A_2h = A_2h_lu, A_4h = A_4h_lu,abstol=abstol,maxiter=length(b))
+    initial_guess_three_level_cg_GPU_error = sqrt((Array(x_initial_guess_three_level_GPU) - analy_sol)'*H_tilde*(Array(x_initial_guess_three_level_GPU) - analy_sol))
 
     # # 3-level multigrid
     # x_3mg, norm_3mg = Three_level_multigrid(A,b,A_2h,b_2h,A_4h,b_4h,Nx,Ny;nu=3,NUM_V_CYCLES=1,SBPp=2)
@@ -578,15 +586,26 @@ function test_matrix_free_MGCG(;level=6,nu=3,ω=2/3,SBPp=2)
     @show t_CG_GPU_initial_guess, iter_initial_guess_cg
     @show t_CG_GPU_initial_guess_three_level, iter_initial_guess_three_level_cg_GPU_2h,iter_initial_guess_three_level_cg_GPU_h
 
+
+    println("Show errors")
+    @show direct_err
+    @show error_CG_GPU
+    @show error_mg_cg
+    @show error_mg_cg_GPU
+    @show initial_guess_cg_error
+    @show initial_guess_cg_GPU_error
+    @show initial_guess_three_level_cg_GPU_error
+
+
     return nothing
 end
 
 
-# test_matrix_free_MGCG(level=6)
-# test_matrix_free_MGCG(level=7)
-# test_matrix_free_MGCG(level=8)
-# test_matrix_free_MGCG(level=9)
-# test_matrix_free_MGCG(level=10)
+test_matrix_free_MGCG(level=6)
+test_matrix_free_MGCG(level=7)
+test_matrix_free_MGCG(level=8)
+test_matrix_free_MGCG(level=9)
+test_matrix_free_MGCG(level=10)
 test_matrix_free_MGCG(level=11)
 test_matrix_free_MGCG(level=12)
 test_matrix_free_MGCG(level=13)
