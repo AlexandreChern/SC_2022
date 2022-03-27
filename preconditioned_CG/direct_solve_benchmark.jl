@@ -27,3 +27,6 @@ function test_direct_solve(;SBPp=2)
         display(benchmark_result)
     end
 end
+
+
+test_direct_solve()
