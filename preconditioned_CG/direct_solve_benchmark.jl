@@ -25,6 +25,7 @@ function test_direct_solve(;SBPp=2)
         benchmark_result = @benchmark $A_lu \ $b;
         # show(io,"text/plain",benchmark_result)
         display(benchmark_result)
+        println()
     end
 end
 
