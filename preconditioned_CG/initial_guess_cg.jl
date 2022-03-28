@@ -385,21 +385,25 @@ end
 
 function initial_guess_interpolation_CG_Matrix_Free_GPU(A_GPU,b_GPU,b_2h,x,Nx_2h;A_2h = A_2h_lu,abstol=abstol,maxiter=length(b))
     x_2h = A_2h \ b_2h
-    x_2h_flip = zeros(length(x_2h))
-    for i in 1:length(x_2h)
-        x_2h_flip[i] = x_2h[end+1-i]
-    end
-    x_interpolated = prolongation_2d_GPU(Nx_2h) * CuArray(x_2h_flip)
+    # x_2h_flip = zeros(length(x_2h))
+    # for i in 1:length(x_2h)
+    #     x_2h_flip[i] = x_2h[end+1-i]
+    # end
+    # x_2h_flip = reverse(x_2h)
+    x_interpolated = prolongation_2d_GPU(Nx_2h) * CuArray(x_2h)
+    x_interpolated = reverse(x_interpolated)
     x_interpolated_reshaped = reshape(x_interpolated,size(b_GPU))
     # x,history = cg!(x_interpolated,A_GPU,b_GPU;abstol = abstol,log=true)
     nums_CG_Matrix_Free_GPU, CG_Matrix_Free_tol, final_norm = CG_full_GPU(b_GPU,x_interpolated_reshaped;abstol=sqrt(eps(real(eltype(b_GPU)))))
-    x = Array(x_interpolated_reshaped)
-    x_flip = similar(x)
-    for i in 1:length(x_flip)
-        x_flip[i] = x[end+1-i]
-    end
+    # x = Array(x_interpolated_reshaped)
+    # x_flip = similar(x)
+    # for i in 1:length(x_flip)
+    #     x_flip[i] = x[end+1-i]
+    # end
+    # x_flip = reverse(x)
+    x = reverse(x_interpolated)
     # return x[:], history.iters, history.data[:resnorm]
-    return x_flip[:], nums_CG_Matrix_Free_GPU, final_norm
+    return x, nums_CG_Matrix_Free_GPU, final_norm
 end
 
 
@@ -535,7 +539,7 @@ function test_matrix_free_MGCG(;level=6,nu=3,ω=2/3,SBPp=2)
     initial_guess_cg_GPU_error = sqrt((Array(x_initial_guess_GPU) - analy_sol)'*H_tilde*(Array(x_initial_guess_GPU)-analy_sol))
 
     x_initial_guess_Matrix_Free_GPU, iter_initial_guess_cg_Matrix_Free_GPU, norm_initial_guess_cg_Matrix_Free_GPU = initial_guess_interpolation_CG_Matrix_Free_GPU(A_GPU_sparse,b_GPU,b_2h,x,Nx_2h;A_2h = A_2h_lu,abstol=abstol,maxiter=length(b))
-    initial_guess_cg_Matrix_Free_GPU_error = sqrt((x_initial_guess_Matrix_Free_GPU-analy_sol)'*H_tilde*(x_initial_guess_Matrix_Free_GPU-analy_sol))
+    initial_guess_cg_Matrix_Free_GPU_error = sqrt((Array(x_initial_guess_Matrix_Free_GPU[:])-analy_sol)'*H_tilde*(Array(x_initial_guess_Matrix_Free_GPU[:])-analy_sol))
 
     # 3-level interpolation 
     x_initial_guess_three_level_GPU,iter_initial_guess_three_level_cg_GPU_2h,iter_initial_guess_three_level_cg_GPU_h, norm_initial_guess_three_level_cg_GPU_2h,norm_initial_guess_three_level_cg_GPU_h = initial_guess_interpolation_three_level_CG_GPU(A_GPU_sparse,A_2h_GPU_sparse,b_GPU,b_2h_GPU,b_2h,b_4h,x,Nx_2h,Nx_4h;A_2h = A_2h_lu, A_4h = A_4h_lu,abstol=abstol,maxiter=length(b))
