@@ -522,6 +522,12 @@ function test_matrix_free_MGCG(;level=6,nu=3,ω=2/3,SBPp=2)
     end
     error_CG_Matrix_Free_GPU = sqrt((x_GPU_flip[:]-analy_sol)'*H_tilde*(x_GPU_flip[:]-analy_sol))
 
+    Ax_GPU = CuArray(zeros(Nx,Ny))
+    x_GPU .= 0
+    iters_matrix_free_CG = CG_Matrix_Free_GPU_v2(x_GPU,Ax_GPU,b_reshaped_GPU,Nx,Ny;abstol=reltol) 
+    x_GPU_reverse = reverse(x_GPU)
+    error_CG_Matrix_Free_v2_GPU = 
+
 
     # @show reshape(x_CG_GPU,Nx,Ny)
     # @show x_GPU

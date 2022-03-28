@@ -4,7 +4,7 @@ using Random
 include("../preconditioned_CG/level_2_multigrid_new.jl")
 include("../split_matrix_free.jl")
 
-evel=6
+level= 11
 nu=3
 ω=2/3
 SBPp=2
@@ -35,16 +35,19 @@ function CG_Matrix_Free_GPU(x_GPU,Ap_GPU,b_reshaped_GPU,Nx,Ny;abstol=reltol)
     matrix_free_A_full_GPU(x_GPU,Ap_GPU)
     r_GPU = b_reshaped_GPU - Ap_GPU
     p_GPU = copy(r_GPU)
-    rsold_GPU = sum(r_GPU .* r_GPU)
+    # rsold_GPU = sum(r_GPU .* r_GPU)
+    rsold_GPU = dot(r_GPU,r_GPU)
     num_iter_steps = 0
     # for i in 1:Nx*Ny
     for i in 1:Nx*Ny
         num_iter_steps += 1
         matrix_free_A_full_GPU(p_GPU,Ap_GPU)
-        alpha_GPU = rsold_GPU / (sum(p_GPU .* Ap_GPU))
+        # alpha_GPU = rsold_GPU / (sum(p_GPU .* Ap_GPU))
+        alpha_GPU = rsold_GPU / dot(p_GPU,Ap_GPU)
         r_GPU .-= alpha_GPU .* Ap_GPU
         x_GPU .+= alpha_GPU .* p_GPU
-        rsnew_GPU = sum(r_GPU .* r_GPU)
+        # rsnew_GPU = sum(r_GPU .* r_GPU)
+        rsnew_GPU = dot(r_GPU,r_GPU)
         if rsnew_GPU < abstol^2
             break
         end
@@ -83,10 +86,13 @@ end
 x_GPU_sparse .= 0
 CG_GPU_sparse(x_GPU_sparse,A_GPU_sparse,b_GPU_sparse;abstol=reltol*norm(b))
 
+x_GPU .= 0
 num_iters_steps = CG_Matrix_Free_GPU(x_GPU,Ap_GPU,b_reshaped_GPU,Nx,Ny;abstol=reltol*norm(b))
 
+x_GPU .= 0
+CG_Matrix_Free_GPU(x_GPU,Ap_GPU,b_reshaped_GPU,Nx,Ny;abstol=reltol*norm(b))
 
-REPEAT = 1
+REPEAT = 3
 
 time_CG_GPU_sparse = @elapsed for _ in 1:REPEAT
     x_GPU_sparse  .= 0
