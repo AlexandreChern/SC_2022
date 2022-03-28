@@ -571,7 +571,7 @@ function test_matrix_free_A(level;TILE_DIM_1=16,TILE_DIM_2=16)
 
 end
 
-function CG_GPU(b_reshaped_GPU,x_GPU)
+function CG_GPU(b_reshaped_GPU,x_GPU;abstol=sqrt(eps(real(eltype(b_reshaped_GPU)))))
     (Nx,Ny) = size(b_reshaped_GPU);
     odata = CuArray(zeros(Nx,Ny))
     matrix_free_A(x_GPU,odata);
@@ -594,7 +594,7 @@ function CG_GPU(b_reshaped_GPU,x_GPU)
         r_GPU .-= alpha_GPU .* Ap_GPU
         x_GPU .+= alpha_GPU .* p_GPU
         rsnew_GPU = norm(r_GPU)^2
-        if sqrt(rsnew_GPU) < rel_tol
+        if sqrt(rsnew_GPU) < machine_eps
             break
         end
         ratio = (rsnew_GPU/rsold_GPU)
@@ -643,7 +643,7 @@ function CG_GPU_v2(b_reshaped_GPU,x_GPU,odata,r_GPU,p_GPU,Ap_GPU)
     (num_iter_steps,rel_tol,rsold_GPU)
 end
 
-function CG_full_GPU(b_reshaped_GPU,x_GPU)
+function CG_full_GPU(b_reshaped_GPU,x_GPU;abstol=sqrt(eps(real(eltype(b_reshaped_GPU)))))
     (Nx,Ny) = size(b_reshaped_GPU);
     odata = CuArray(zeros(Nx,Ny))
     # matrix_free_A_full_GPU(x_GPU,odata);
@@ -681,6 +681,7 @@ function CG_full_GPU(b_reshaped_GPU,x_GPU)
     end
     # @show num_iter_steps
     (num_iter_steps,rel_tol,norms[end])
+    # return x_GPU, num_iter_steps
 end
 
 function CG_CPU(A,b,x)
@@ -708,5 +709,5 @@ function CG_CPU(A,b,x)
         # @show rsold
     end
     # @show num_iter_steps
-    num_iter_steps
+    return x, num_iter_steps
 end
