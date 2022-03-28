@@ -669,7 +669,7 @@ function CG_full_GPU(b_reshaped_GPU,x_GPU;abstol=sqrt(eps(real(eltype(b_reshaped
         x_GPU .+= alpha_GPU .* p_GPU
         # CUDA.CUBLAS.axpy!()
         rsnew_GPU = sum(r_GPU .* r_GPU)
-        if sqrt(rsnew_GPU) < rel_tol
+        if sqrt(rsnew_GPU) < abstol
             break
         end
         p_GPU .= r_GPU .+ (rsnew_GPU/rsold_GPU) .* p_GPU;
