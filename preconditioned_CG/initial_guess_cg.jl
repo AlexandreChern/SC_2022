@@ -578,7 +578,8 @@ function test_matrix_free_MGCG(;level=6,nu=3,ω=2/3,SBPp=2)
     t_CG_GPU_sparse = @elapsed for _ in 1:REPEAT
         # cg(A_GPU_sparse,b_GPU_sparse,abstol=abstol,log=true)
         x_GPU_flat .= 0
-        CG_CPU(A_GPU_sparse,b_GPU_flat,x_GPU_flat)
+        # CG_CPU(A_GPU_sparse,b_GPU_flat,x_GPU_flat)
+        CG_GPU_sparse(x_GPU_flat,A_GPU_sparse,b_GPU_sparse;abstol=reltol)
     end
 
     x_GPU .= 0
@@ -597,7 +598,7 @@ function test_matrix_free_MGCG(;level=6,nu=3,ω=2/3,SBPp=2)
     end
 
     t_CG_Matrix_Free_GPU_initial_guess = @elapsed for _ in 1:REPEAT
-        initial_guess_interpolation_CG_Matrix_Free_GPU(A_GPU_sparse,b_GPU,b_2h,x,Nx_2h;A_2h = A_2h_lu,abstol=abstol,maxiter=length(b))    
+        initial_guess_interpolation_CG_Matrix_Free_GPU(A_GPU_sparse,b_GPU,b_2h,x,Nx_2h;Nx=Nx,Ny=Ny,A_2h = A_2h_lu,abstol=abstol,maxiter=length(b))    
     end
 
     t_CG_GPU_initial_guess_three_level = @elapsed for _ in 1:REPEAT
