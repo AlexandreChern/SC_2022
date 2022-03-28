@@ -39,6 +39,7 @@ function CG_Matrix_Free_GPU(x_GPU,Ap_GPU,b_reshaped_GPU,Nx,Ny;abstol=reltol)
     rsold_GPU = dot(r_GPU,r_GPU)
     num_iter_steps = 0
     # for i in 1:Nx*Ny
+    norms = [sqrt(rsold_GPU)]
     for i in 1:Nx*Ny
         num_iter_steps += 1
         matrix_free_A_full_GPU(p_GPU,Ap_GPU)
@@ -53,8 +54,9 @@ function CG_Matrix_Free_GPU(x_GPU,Ap_GPU,b_reshaped_GPU,Nx,Ny;abstol=reltol)
         end
         p_GPU .= r_GPU .+ (rsnew_GPU/rsold_GPU) .* p_GPU
         rsold_GPU = rsnew_GPU
+        push!(norms,sqrt(rsnew_GPU))
     end
-    return num_iter_steps
+    return num_iter_steps,abstol,norms[end]
 end
 
 
@@ -64,6 +66,7 @@ function CG_GPU_sparse(x_GPU_sparse,A_GPU_sparse,b_GPU_sparse;abstol=reltol)
     p_GPU_sparse = copy(r_GPU_sparse)
     rsold_GPU = sum(r_GPU_sparse .* r_GPU_sparse)
     num_iter_steps = 0
+    norms = [sqrt(rsold_GPU)]
     for i in 1:Nx*Ny
         num_iter_steps += 1
         # Ap_GPU_sparse .= A_GPU_sparse * p_GPU_sparse
@@ -79,15 +82,16 @@ function CG_GPU_sparse(x_GPU_sparse,A_GPU_sparse,b_GPU_sparse;abstol=reltol)
         end
         p_GPU_sparse .= r_GPU_sparse .+ (rsnew_GPU / rsold_GPU) .* p_GPU_sparse
         rsold_GPU = rsnew_GPU
+        push!(norms,sqrt(rsnew_GPU))
     end
-    return num_iter_steps
+    return num_iter_steps,abstol,norms[end]
 end
 
 x_GPU_sparse .= 0
 CG_GPU_sparse(x_GPU_sparse,A_GPU_sparse,b_GPU_sparse;abstol=reltol*norm(b))
 
 x_GPU .= 0
-num_iters_steps = CG_Matrix_Free_GPU(x_GPU,Ap_GPU,b_reshaped_GPU,Nx,Ny;abstol=reltol*norm(b))
+num_iters_steps,tolerance,last_norm = CG_Matrix_Free_GPU(x_GPU,Ap_GPU,b_reshaped_GPU,Nx,Ny;abstol=reltol*norm(b))
 
 x_GPU .= 0
 CG_Matrix_Free_GPU(x_GPU,Ap_GPU,b_reshaped_GPU,Nx,Ny;abstol=reltol*norm(b))
