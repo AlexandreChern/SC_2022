@@ -581,7 +581,7 @@ function test_matrix_free_MGCG(;level=6,nu=3,ω=2/3,SBPp=2)
     end
 
     t_CG_Matrix_Free_GPU_initial_guess = @elapsed for _ in 1:REPEAT
-        initial_guess_interpolation_CG_GPU(A_GPU_sparse,b_GPU,b_2h,x,Nx_2h;A_2h = A_2h_lu,abstol=abstol,maxiter=length(b))
+        initial_guess_interpolation_CG_Matrix_Free_GPU(A_GPU_sparse,b_GPU,b_2h,x,Nx_2h;A_2h = A_2h_lu,abstol=abstol,maxiter=length(b))    
     end
 
     t_CG_GPU_initial_guess_three_level = @elapsed for _ in 1:REPEAT
@@ -632,4 +632,4 @@ test_matrix_free_MGCG(level=9)
 test_matrix_free_MGCG(level=10)
 test_matrix_free_MGCG(level=11)
 test_matrix_free_MGCG(level=12)
-# test_matrix_free_MGCG(level=13)
+test_matrix_free_MGCG(level=13)

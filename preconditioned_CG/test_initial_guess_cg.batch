@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=test_initial_guess_cg     ### Job Name
 #SBATCH --partition=cisds       ### Similar to a queue in PBS
-#SBATCH --time=0-06:00:00     ### Wall clock time limit in Days-HH:MM:SS
+#SBATCH --time=0-12:00:00     ### Wall clock time limit in Days-HH:MM:SS
 #SBATCH --output=test_initial_guess_cg_%j.out   ### file in which to store job stdout
 #SBATCH --error=test_initial_guess_cg_%j.err    ### file in which to store job stderr
 #SBATCH --nodes=1             ### Node count required for the job
