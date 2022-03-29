@@ -431,10 +431,14 @@ end
 
 function MG_interpolation_CG_Matrix_Free_GPU(A_GPU,b_GPU,b_2h,x,Nx_2h;Nx=Nx,Ny=Ny,A_2h = A_2h_lu,abstol=abstol,maxiter=length(b))
     # x_MG_initial_guess = CuArray(zeros(Nx,Ny))
-    Ap_GPU = similar(b_GPU)
-    # x_MG_initial_guess_reverse, _ = matrix_free_Two_level_multigrid(b_GPU,A_2h;nu=0,NUM_V_CYCLES=1,SBPp=2)
-    x_MG_initial_guess_reverse = matrix_free_Two_level_multigrid_simple(b_GPU,A_2h;nu=0,SBPp=2)
-    x_MG_initial_guess = reverse(x_MG_initial_guess_reverse;dims=2)
+    # Ap_GPU = similar(b_GPU)
+    # # x_MG_initial_guess_reverse, _ = matrix_free_Two_level_multigrid(b_GPU,A_2h;nu=0,NUM_V_CYCLES=1,SBPp=2)
+    # x_MG_initial_guess_reverse = matrix_free_Two_level_multigrid_simple(b_GPU,A_2h;nu=50,SBPp=2)
+    
+    x_MG_initial_guess_reverse = Two_level_multigrid(A,b,Nx,Ny,A_2h;nu=100,NUM_V_CYCLES=1,SBPp=2)[1]
+    x_MG_initial_guess_reverse_reshaped = reshape(x_MG_initial_guess_reverse,Nx,Ny)
+    
+    x_MG_initial_guess = CuArray(reverse(x_MG_initial_guess_reverse_reshaped,dims=2))
     nums_CG_Matrix_Free_GPU, CG_Matrix_Free_tol, final_norm = CG_Matrix_Free_GPU_v2(x_MG_initial_guess,Ap_GPU,b_GPU,Nx,Ny;abstol=sqrt(eps(real(eltype(b_GPU))))) 
     x = reverse(x_MG_initial_guess[:])
     return x, nums_CG_Matrix_Free_GPU, final_norm
