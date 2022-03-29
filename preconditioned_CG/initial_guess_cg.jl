@@ -410,7 +410,8 @@ end
 function MG_interpolation_CG_Matrix_Free_GPU(A_GPU,b_GPU,b_2h,x,Nx_2h;Nx=Nx,Ny=Ny,A_2h = A_2h_lu,abstol=abstol,maxiter=length(b))
     x_MG_initial_guess = similar(b_GPU)
     Ap_GPU = similar(b_GPU)
-    matrix_free_MGCG(b_GPU,x_MG_initial_guess;A_2h = A_2h,maxiter=length(b),abstol=sqrt(eps(real(eltype(b)))),NUM_V_CYCLES=1,nu=3,use_galerkin=true,direct_sol=0,H_tilde=0,SBPp=2)
+    matrix_free_MGCG(b_GPU,x_MG_initial_guess;A_2h = A_2h,maxiter=length(b),abstol=sqrt(eps(real(eltype(b)))),NUM_V_CYCLES=1,nu=20,use_galerkin=true,direct_sol=0,H_tilde=0,SBPp=2)
+    x_MG_initial_guess = reverse(x_MG_initial_guess;dims=2)
     nums_CG_Matrix_Free_GPU, CG_Matrix_Free_tol, final_norm = CG_Matrix_Free_GPU_v2(x_MG_initial_guess,Ap_GPU,b_GPU,Nx,Ny;abstol=sqrt(eps(real(eltype(b_GPU))))) 
     x = reverse(x_MG_initial_guess[:])
     return x, nums_CG_Matrix_Free_GPU, final_norm
@@ -660,11 +661,12 @@ end
 
 # test_matrix_free_MGCG(level=3)
 
-test_matrix_free_MGCG(level=6)
-test_matrix_free_MGCG(level=7)
-test_matrix_free_MGCG(level=8)
+# test_matrix_free_MGCG(level=6)
+# test_matrix_free_MGCG(level=7)
+# test_matrix_free_MGCG(level=8)
 test_matrix_free_MGCG(level=9)
+
 test_matrix_free_MGCG(level=10)
-test_matrix_free_MGCG(level=11)
-test_matrix_free_MGCG(level=12)
-test_matrix_free_MGCG(level=13)
+# test_matrix_free_MGCG(level=11)
+# test_matrix_free_MGCG(level=12)
+# test_matrix_free_MGCG(level=13)
