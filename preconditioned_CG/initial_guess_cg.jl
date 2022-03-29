@@ -132,10 +132,14 @@ end
 
 
 function matrix_free_richardson(idata_GPU,odata_GPU,b_GPU;maxiter=3,ω=0.15)
-    for _ in 1:maxiter
-        matrix_free_A_full_GPU(idata_GPU,odata_GPU) # matrix_free_A_full_GPU is -A here, becareful
-        odata_GPU .= idata_GPU .+ ω * (b_GPU .+ odata_GPU)
-        idata_GPU .= odata_GPU
+    if maxiter==0
+        odata_GPU .= idata_GPU
+    else
+        for _ in 1:maxiter
+            matrix_free_A_full_GPU(idata_GPU,odata_GPU) # matrix_free_A_full_GPU is -A here, becareful
+            odata_GPU .= idata_GPU .+ ω * (b_GPU .+ odata_GPU)
+            idata_GPU .= odata_GPU
+        end
     end
 end
 
@@ -173,6 +177,26 @@ function matrix_free_Two_level_multigrid(b_GPU,A_2h;nu=3,NUM_V_CYCLES=1,SBPp=2)
     end
     matrix_free_A_full_GPU(v_values_out_GPU[1],Av_values_out_GPU[1])
     return (v_values_out_GPU[1],norm(-Av_values_out_GPU[1]-b_GPU))
+end
+
+function matrix_free_Two_level_multigrid_simple(b_GPU,A_2h;nu=3,SBPp=2)
+    (Nx,Ny) = size(b_GPU)
+    (Nx_2h,Ny_2h) = div.((Nx,Ny) .+ 1,2)
+
+    v_value = CuArray(zeros(Nx,Ny))
+    v_out = CuArray(zeros(Nx,Ny))
+    Av_value = CuArray(zeros(Nx,Ny))
+    f_GPU = CuArray(zeros(Nx_2h,Ny_2h))
+    e_GPU = CuArray(zeros(Nx,Ny))
+    matrix_free_richardson(v_value,v_out,b_GPU;maxiter=nu)
+    matrix_free_A_full_GPU(v_out,Av_value)
+    r_GPU = b_GPU + Av_value
+    matrix_free_restriction_2d_GPU(r_GPU,f_GPU)
+    v_value_2 =  reshape(CuArray(A_2h \ Array(f_GPU[:])),Nx_2h,Ny_2h)
+    matrix_free_prolongation_2d_GPU(v_value_2,e_GPU)
+    v_value .+= e_GPU
+    matrix_free_richardson(v_value,v_out,b_GPU;maxiter=nu)
+    return v_out
 end
 
 function Three_level_multigrid(A,b,A_2h,b_2h,A_4h,b_4h,Nx,Ny;nu=3,NUM_V_CYCLES=1,SBPp=2)
@@ -406,10 +430,11 @@ function initial_guess_interpolation_CG_Matrix_Free_GPU(A_GPU,b_GPU,b_2h,x,Nx_2h
 end
 
 function MG_interpolation_CG_Matrix_Free_GPU(A_GPU,b_GPU,b_2h,x,Nx_2h;Nx=Nx,Ny=Ny,A_2h = A_2h_lu,abstol=abstol,maxiter=length(b))
-    x_MG_initial_guess = similar(b_GPU)
+    # x_MG_initial_guess = CuArray(zeros(Nx,Ny))
     Ap_GPU = similar(b_GPU)
-    x_MG_initial_guess,_ = matrix_free_Two_level_multigrid(b_GPU,A_2h;nu=3,NUM_V_CYCLES=1,SBPp=2)
-    # x_MG_initial_guess = reverse(x_MG_initial_guess;dims=2)
+    # x_MG_initial_guess_reverse, _ = matrix_free_Two_level_multigrid(b_GPU,A_2h;nu=0,NUM_V_CYCLES=1,SBPp=2)
+    x_MG_initial_guess_reverse = matrix_free_Two_level_multigrid_simple(b_GPU,A_2h;nu=0,SBPp=2)
+    x_MG_initial_guess = reverse(x_MG_initial_guess_reverse;dims=2)
     nums_CG_Matrix_Free_GPU, CG_Matrix_Free_tol, final_norm = CG_Matrix_Free_GPU_v2(x_MG_initial_guess,Ap_GPU,b_GPU,Nx,Ny;abstol=sqrt(eps(real(eltype(b_GPU))))) 
     x = reverse(x_MG_initial_guess[:])
     return x, nums_CG_Matrix_Free_GPU, final_norm
