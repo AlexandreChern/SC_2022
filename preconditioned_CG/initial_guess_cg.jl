@@ -528,6 +528,7 @@ function test_matrix_free_MGCG(;level=6,nu=3,ω=2/3,SBPp=2)
 
     x_GPU = CuArray(zeros(Nx,Ny))
     b_GPU = CuArray(reshape(b,Nx,Ny))
+    b_GPU_v2 = CuArray(reshape(reverse(b),Nx,Ny)) # Remember to reverse b_GPU when using matrix_free
 
     ω_richardson = 0.15
     h = 1/(Nx-1)
@@ -551,7 +552,7 @@ function test_matrix_free_MGCG(;level=6,nu=3,ω=2/3,SBPp=2)
     x_CG_GPU, nums_CG_GPU_step = CG_CPU(A_GPU_sparse,b_GPU_flat,x_GPU_flat)
     error_CG_GPU = sqrt((Array(x_CG_GPU)-analy_sol)'*H_tilde*(Array(x_CG_GPU)-analy_sol))
 
-    nums_CG_Matrix_Free_GPU, CG_Matrix_Free_tol, final_norm = CG_full_GPU(b_GPU,x_GPU;abstol=sqrt(eps(real(eltype(b_GPU)))))
+    nums_CG_Matrix_Free_GPU, CG_Matrix_Free_tol, final_norm = CG_full_GPU(b_GPU_v2,x_GPU;abstol=sqrt(eps(real(eltype(b_GPU)))))
     x_GPU_to_CPU = Array(x_GPU)
     x_GPU_flip = zeros(Nx,Ny)
     for i in 1:Nx*Ny
