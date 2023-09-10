@@ -444,8 +444,9 @@ end
 function matrix_free_A_full_GPU(idata,odata)
     Nx,Ny = size(idata)
     h = 1/(Nx-1)
-    TILE_DIM_1 = 16
-    TILE_DIM_2 = 16
+     TILE_DIM_1 = 16
+     TILE_DIM_2 = 16
+    #TILE_DIM_1 = TILE_DIM_2 = 32
     griddim_2d = (div(Nx,TILE_DIM_1) + 1, div(Ny,TILE_DIM_2) + 1)
 	blockdim_2d = (TILE_DIM_1,TILE_DIM_2)
 

@@ -318,10 +318,11 @@ let
 
     CUDA.reclaim()
     b_reshaped_GPU = CuArray(b_reshaped)
-    x_reshaped_GPU = CuArray(b_reshaped_GPU)
+    x_reshaped_GPU = CuArray(zeros(Nx,Ny))
 
     for _ = 1:Iterations
         matrix_free_A_full_GPU(b_reshaped_GPU,x_reshaped_GPU)
+        #copyto!(x_reshaped_GPU,b_reshaped_GPU)
     end
 
     CUDA.memory_status()
